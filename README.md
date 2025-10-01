@@ -1,5 +1,5 @@
 # rohhh3/yt-playlist-mp3
-Dead simple YouTube playlist to MP3 converter that runs locally on your machine. Start the server, paste the URL, click the download button once, and download all your music. Works great for getting music to Navidrome. Don't tell uncle Google.
+Dead simple YouTube playlist to MP3 converter that runs locally on your machine. Start the server, paste the URL, click the download button once, and download all your music in bulk. Works great for getting music to Navidrome. Don't tell uncle Google.
 
 ![App Screenshot](https://github.com/rohhh3/yt-playlist-mp3/blob/main/untitled1.png)
 ## Features
