@@ -46,6 +46,29 @@
             margin-bottom: 20px;
         }
 
+        .input-group.inline {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .input-group.inline label {
+            margin-bottom: 0;
+            flex: 1;
+        }
+
+        .input-group small {
+            color: #888;
+            font-size: 12px;
+            display: block;
+            margin-top: 8px;
+            line-height: 1.4;
+        }
+
         label {
             display: block;
             margin-bottom: 8px;
@@ -201,6 +224,30 @@
             display: block;
         }
 
+        .timer {
+            margin-top: 20px;
+            padding: 12px 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            text-align: center;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 16px;
+            color: #333;
+            font-weight: 600;
+            display: none;
+            border: 2px solid #e0e0e0;
+        }
+
+        .timer.show {
+            display: block;
+        }
+
+        .timer.completed {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+
         .console {
             margin-top: 20px;
             background: #1e1e1e;
@@ -274,7 +321,7 @@
 
         <form id="downloadForm">
             <div class="input-group">
-                <label for="playlistUrl">Playlist URL</label>
+                <label for="playlistUrl">Public Playlist URL</label>
                 <input 
                     type="text" 
                     id="playlistUrl" 
@@ -285,7 +332,7 @@
             </div>
 
             <div class="toggle-group">
-                <span class="toggle-label">Include Metadata (Title, Description)</span>
+                <span class="toggle-label">Include Metadata (Title, Description etc.)</span>
                 <label class="toggle-switch">
                     <input type="checkbox" id="includeMetadata">
                     <span class="slider"></span>
@@ -299,6 +346,8 @@
         </form>
 
         <div id="message" class="message"></div>
+
+        <div id="timer" class="timer">⏱️ Elapsed Time: <span id="timerDisplay">00:00:00</span></div>
 
         <div id="console" class="console"></div>
 
@@ -314,8 +363,48 @@
         const btnText = document.getElementById('btnText');
         const consoleDiv = document.getElementById('console');
         const metadataCheckbox = document.getElementById('includeMetadata');
+        const timerDiv = document.getElementById('timer');
+        const timerDisplay = document.getElementById('timerDisplay');
 
         let eventSource = null;
+        let timerInterval = null;
+        let startTime = null;
+
+        function formatTime(seconds) {
+            const hrs = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        function startTimer() {
+            timerDiv.classList.add('show');
+            timerDiv.classList.remove('completed');
+            startTime = Date.now();
+            
+            timerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                timerDisplay.textContent = formatTime(elapsed);
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                timerDiv.classList.add('completed');
+            }
+        }
+
+        function resetTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            timerDiv.classList.remove('show', 'completed');
+            timerDisplay.textContent = '00:00:00';
+            startTime = null;
+        }
 
         function addConsoleLine(text, type = 'info') {
             const line = document.createElement('div');
@@ -329,6 +418,7 @@
         function clearConsole() {
             consoleDiv.innerHTML = '';
             consoleDiv.classList.remove('show');
+            resetTimer();
         }
 
         // Connect to SSE for progress updates
@@ -342,6 +432,11 @@
             eventSource.onmessage = (event) => {
                 const data = JSON.parse(event.data);
                 addConsoleLine(data.message, data.type);
+                
+                // Check if download completed
+                if (data.message.includes('Playlist download completed')) {
+                    stopTimer();
+                }
             };
 
             eventSource.onerror = (error) => {
@@ -368,6 +463,7 @@
             messageDiv.textContent = '';
 
             addConsoleLine('Starting playlist download...', 'info');
+            startTimer();
 
             try {
                 const response = await fetch('/download', {
@@ -377,7 +473,7 @@
                     },
                     body: JSON.stringify({ 
                         playlistUrl,
-                        includeMetadata 
+                        includeMetadata
                     })
                 });
 
@@ -390,11 +486,13 @@
                     messageDiv.className = 'message error show';
                     messageDiv.textContent = `❌ Error: ${data.error}`;
                     addConsoleLine(`Error: ${data.error}`, 'error');
+                    stopTimer();
                 }
             } catch (error) {
                 messageDiv.className = 'message error show';
                 messageDiv.textContent = `❌ Error: ${error.message}`;
                 addConsoleLine(`Error: ${error.message}`, 'error');
+                stopTimer();
             } finally {
                 downloadBtn.disabled = false;
                 btnText.textContent = 'Download Playlist';
