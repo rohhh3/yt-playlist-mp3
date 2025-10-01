@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>rohhh3/yt-playlist-mp3</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 700px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .toggle-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .toggle-label {
+            color: #333;
+            font-weight: 500;
+            font-size: 15px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 60px;
+            height: 30px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.4s;
+            border-radius: 30px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #667eea;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(30px);
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+
+        button:disabled .spinner {
+            display: block;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .console {
+            margin-top: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 10px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .console.show {
+            display: block;
+        }
+
+        .console-line {
+            margin: 2px 0;
+            line-height: 1.4;
+        }
+
+        .console-line.info {
+            color: #4ec9b0;
+        }
+
+        .console-line.success {
+            color: #b5cea8;
+        }
+
+        .console-line.error {
+            color: #f48771;
+        }
+
+        .info-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .info-box strong {
+            color: #333;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #2d2d2d;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #777;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 YouTube Playlist Downloader</h1>
+        <p class="subtitle">Download entire playlists as MP3 files (192kbps)</p>
+
+        <form id="downloadForm">
+            <div class="input-group">
+                <label for="playlistUrl">Playlist URL</label>
+                <input 
+                    type="text" 
+                    id="playlistUrl" 
+                    name="playlistUrl" 
+                    placeholder="https://www.youtube.com/playlist?list=..." 
+                    required
+                >
+            </div>
+
+            <div class="toggle-group">
+                <span class="toggle-label">Include Metadata (Title, Description)</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="includeMetadata">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <button type="submit" id="downloadBtn">
+                <span class="spinner"></span>
+                <span id="btnText">Download Playlist</span>
+            </button>
+        </form>
+
+        <div id="message" class="message"></div>
+
+        <div id="console" class="console"></div>
+
+        <div class="info-box">
+            <strong>📁 Download Location:</strong> Files will be saved to the "downloads" folder in the server directory.
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('downloadForm');
+        const messageDiv = document.getElementById('message');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const btnText = document.getElementById('btnText');
+        const consoleDiv = document.getElementById('console');
+        const metadataCheckbox = document.getElementById('includeMetadata');
+
+        let eventSource = null;
+
+        function addConsoleLine(text, type = 'info') {
+            const line = document.createElement('div');
+            line.className = `console-line ${type}`;
+            line.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+            consoleDiv.appendChild(line);
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+            consoleDiv.classList.add('show');
+        }
+
+        function clearConsole() {
+            consoleDiv.innerHTML = '';
+            consoleDiv.classList.remove('show');
+        }
+
+        // Connect to SSE for progress updates
+        function connectSSE() {
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            eventSource = new EventSource('/progress');
+            
+            eventSource.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                addConsoleLine(data.message, data.type);
+            };
+
+            eventSource.onerror = (error) => {
+                console.error('SSE Error:', error);
+            };
+        }
+
+        // Connect to SSE on page load
+        connectSSE();
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const playlistUrl = document.getElementById('playlistUrl').value;
+            const includeMetadata = metadataCheckbox.checked;
+
+            // Clear previous console
+            clearConsole();
+
+            // Disable button and show loading
+            downloadBtn.disabled = true;
+            btnText.textContent = 'Processing...';
+            messageDiv.className = 'message';
+            messageDiv.textContent = '';
+
+            addConsoleLine('Starting playlist download...', 'info');
+
+            try {
+                const response = await fetch('/download', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        playlistUrl,
+                        includeMetadata 
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    messageDiv.className = 'message success show';
+                    messageDiv.textContent = `✅ Download started! Processing ${data.totalVideos} videos from "${data.playlistTitle}". It can take some time so check your download directory in a few minutes ☕`;
+                } else {
+                    messageDiv.className = 'message error show';
+                    messageDiv.textContent = `❌ Error: ${data.error}`;
+                    addConsoleLine(`Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                messageDiv.className = 'message error show';
+                messageDiv.textContent = `❌ Error: ${error.message}`;
+                addConsoleLine(`Error: ${error.message}`, 'error');
+            } finally {
+                downloadBtn.disabled = false;
+                btnText.textContent = 'Download Playlist';
+            }
+        });
+    </script>
+</body>
+</html>
