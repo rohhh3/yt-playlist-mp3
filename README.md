@@ -19,6 +19,8 @@ Dead simple YouTube playlist to MP3 converter that runs locally on your machine.
 git clone https://github.com/yourusername/yt-playlist-mp3.git
 cd yt-playlist-mp3
 ```
+1b. **Or downlaod as zip**
+Here: https://github.com/rohhh3/yt-playlist-mp3/archive/refs/heads/main.zip
 
 2. **Install dependencies:**
 ```bash
