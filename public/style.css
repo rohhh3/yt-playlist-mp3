@@ -39,29 +39,6 @@ h1 {
     margin-bottom: 20px;
 }
 
-.input-group.inline {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    padding: 15px;
-    background: #f8f9fa;
-    border-radius: 10px;
-    border: 2px solid #e0e0e0;
-}
-
-.input-group.inline label {
-    margin-bottom: 0;
-    flex: 1;
-}
-
-.input-group small {
-    color: #888;
-    font-size: 12px;
-    display: block;
-    margin-top: 8px;
-    line-height: 1.4;
-}
-
 label {
     display: block;
     margin-bottom: 8px;
@@ -273,6 +250,10 @@ button:disabled .spinner {
 
 .console-line.error {
     color: #f48771;
+}
+
+.console-line.warning {
+    color: #dcdcaa;
 }
 
 .info-box {

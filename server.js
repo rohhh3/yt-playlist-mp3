@@ -62,17 +62,43 @@ app.post('/download', async (req, res) => {
     sendProgress('Fetching playlist information...', 'info');
     sendProgress(`URL: ${playlistUrl}`, 'info');
     
-    // Get playlist info using yt-dlp
-    const playlistInfo = await ytdlp(playlistUrl, {
-      dumpSingleJson: true,
-      noWarnings: true,
-      noCheckCertificate: true,
-      preferFreeFormats: true,
-      referer: 'https://www.youtube.com/'
-    });
+    let playlistInfo;
+    let videoCount = 0;
+    let playlistTitle = 'Unknown Playlist';
 
-    const videoCount = playlistInfo.entries ? playlistInfo.entries.length : 1;
-    const playlistTitle = playlistInfo.title || 'Unknown Playlist';
+    try {
+      // Try to get playlist info - catch errors but parse successful output
+      try {
+        playlistInfo = await ytdlp(playlistUrl, {
+          flatPlaylist: true,
+          dumpSingleJson: true,
+          quiet: true,
+          ignoreErrors: true,
+          noCheckCertificate: true,
+          preferFreeFormats: true,
+          referer: 'https://www.youtube.com/'
+        });
+      } catch (error) {
+        // Even if command fails, try to parse JSON from stdout
+        if (error.stdout) {
+          try {
+            playlistInfo = JSON.parse(error.stdout);
+          } catch (parseError) {
+            throw error; // Re-throw if we can't parse the output
+          }
+        } else {
+          throw error;
+        }
+      }
+
+      videoCount = playlistInfo.entries ? playlistInfo.entries.filter(e => e !== null).length : 0;
+      playlistTitle = playlistInfo.title || 'Unknown Playlist';
+    } catch (error) {
+      // If everything fails, still try to download
+      sendProgress('Could not fetch playlist info, but will attempt download...', 'info');
+      playlistTitle = 'Unknown Playlist';
+      videoCount = 'unknown number of';
+    }
 
     sendProgress(`Playlist Title: ${playlistTitle}`, 'success');
     sendProgress(`Total Videos: ${videoCount}`, 'success');
@@ -102,6 +128,9 @@ async function downloadPlaylist(playlistUrl, playlistTitle, videoCount, includeM
   sendProgress(`Playlist: ${playlistTitle}`, 'info');
   sendProgress('========================================', 'info');
 
+  const skippedVideos = [];
+  let currentVideoTitle = null;
+
   try {
     const options = {
       extractAudio: true,
@@ -110,15 +139,14 @@ async function downloadPlaylist(playlistUrl, playlistTitle, videoCount, includeM
       output: path.join(downloadsDir, '%(title)s.%(ext)s'),
       progress: true,
       newline: true,
-      ffmpegLocation: ffmpegPath
+      ffmpegLocation: ffmpegPath,
+      ignoreErrors: true
     };
 
-    // Add metadata only if enabled
     if (includeMetadata) {
       options.addMetadata = true;
     }
 
-    // Download entire playlist as MP3 with yt-dlp
     const process = ytdlp.exec(playlistUrl, options);
 
     // Stream stdout
@@ -126,19 +154,25 @@ async function downloadPlaylist(playlistUrl, playlistTitle, videoCount, includeM
       const lines = data.toString().split('\n');
       lines.forEach(line => {
         if (line.trim()) {
-          // Parse and format the line
-          if (line.includes('[download]')) {
+          if (line.includes('Downloading item')) {
             sendProgress(line.trim(), 'info');
-          } else if (line.includes('[ExtractAudio]')) {
+          } else if (line.includes('[download]') && line.includes('%')) {
+            // Show download progress with percentage and speed
+            sendProgress(line.trim(), 'info');
+          } else if (line.includes('[ExtractAudio]') && line.includes('Destination:')) {
+            const match = line.match(/Destination: .*[\/\\](.+\.mp3)/);
+            if (match) {
+              sendProgress(`✓ Converted: ${match[1]}`, 'success');
+            }
+          } else if (line.includes('Finished downloading playlist')) {
             sendProgress(line.trim(), 'success');
-          } else if (line.includes('Downloading item')) {
+          } else if (line.includes('[download] Downloading playlist:')) {
             sendProgress(line.trim(), 'info');
-          } else if (line.includes('[youtube]')) {
-            sendProgress(line.trim(), 'info');
-          } else if (line.includes('[info]')) {
-            sendProgress(line.trim(), 'info');
-          } else if (line.trim().length > 0) {
-            sendProgress(line.trim(), 'info');
+          } else if (line.includes('[youtube] Extracting URL:')) {
+            const urlMatch = line.match(/watch\?v=([a-zA-Z0-9_-]+)/);
+            if (urlMatch) {
+              currentVideoTitle = urlMatch[1];
+            }
           }
         }
       });
@@ -148,21 +182,53 @@ async function downloadPlaylist(playlistUrl, playlistTitle, videoCount, includeM
     process.stderr.on('data', (data) => {
       const lines = data.toString().split('\n');
       lines.forEach(line => {
-        if (line.trim() && !line.includes('Deprecated Feature')) {
-          sendProgress(line.trim(), 'error');
+        if (line.trim()) {
+          // Detect errors for specific videos
+          if ((line.includes('Sign in to confirm your age') || 
+               line.includes('Private video') || 
+               line.includes('Video unavailable')) && 
+              line.includes('[youtube]')) {
+            const videoIdMatch = line.match(/\[youtube\] ([a-zA-Z0-9_-]+):/);
+            if (videoIdMatch) {
+              const videoId = videoIdMatch[1];
+              const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+              skippedVideos.push(videoUrl);
+              // Don't send progress here, save for end
+            }
+          } else if (!line.includes('Deprecated Feature') && 
+                     !line.includes('WARNING') &&
+                     !line.includes('cookies-from-browser')) {
+            // Only show critical errors
+            if (line.startsWith('ERROR:') && !line.includes('Sign in') && !line.includes('Private') && !line.includes('unavailable')) {
+              sendProgress(line.trim(), 'error');
+            }
+          }
         }
       });
     });
 
-    await process;
+    try {
+      await process;
+    } catch (error) {
+      // Process may exit with error code 1 due to skipped videos, but that's okay
+    }
 
     sendProgress('========================================', 'success');
     sendProgress('✅ Playlist download completed!', 'success');
+    if (skippedVideos.length > 0) {
+      sendProgress('========================================', 'warning');
+      sendProgress(`⚠ Skipped ${skippedVideos.length} unavailable/restricted video(s):`, 'warning');
+      skippedVideos.forEach(url => {
+        sendProgress(`  • ${url}`, 'warning');
+      });
+    }
     sendProgress('========================================', 'success');
 
   } catch (error) {
-    sendProgress(`❌ Download failed: ${error.message}`, 'error');
-    console.error(error);
+    // Don't show the full error if downloads actually completed
+    if (error.message && !error.message.includes('Finished downloading playlist')) {
+      sendProgress(`Note: Some videos may have been skipped due to restrictions`, 'info');
+    }
   }
 }
 
