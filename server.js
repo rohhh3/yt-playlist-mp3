@@ -1,4 +1,3 @@
-// server.js
 const express = require('express');
 const ytdlp = require('yt-dlp-exec');
 const { ffmpegPath } = require('ffmpeg-ffprobe-static');
@@ -8,26 +7,21 @@ const fs = require('fs');
 const app = express();
 const PORT = 3000;
 
-// Store SSE clients
 const clients = new Map();
 
-// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 
-// Ensure downloads directory exists
 const downloadsDir = path.join(__dirname, 'downloads');
 if (!fs.existsSync(downloadsDir)) {
   fs.mkdirSync(downloadsDir);
 }
 
-// Home page
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// SSE endpoint for progress updates
 app.get('/progress', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -50,7 +44,6 @@ function sendProgress(message, type = 'info') {
   console.log(message);
 }
 
-// Download playlist endpoint
 app.post('/download', async (req, res) => {
   const { playlistUrl, includeMetadata } = req.body;
 
@@ -129,7 +122,6 @@ async function downloadPlaylist(playlistUrl, playlistTitle, videoCount, includeM
   sendProgress('========================================', 'info');
 
   const skippedVideos = [];
-  let currentVideoTitle = null;
 
   try {
     const options = {
@@ -217,7 +209,7 @@ async function downloadPlaylist(playlistUrl, playlistTitle, videoCount, includeM
     sendProgress('✅ Playlist download completed!', 'success');
     if (skippedVideos.length > 0) {
       sendProgress('========================================', 'warning');
-      sendProgress(`⚠ Skipped ${skippedVideos.length} unavailable/restricted video(s):`, 'warning');
+      sendProgress(`⚠️ Skipped ${skippedVideos.length} unavailable/restricted video(s):`, 'warning');
       skippedVideos.forEach(url => {
         sendProgress(`  • ${url}`, 'warning');
       });
