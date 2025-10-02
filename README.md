@@ -37,9 +37,3 @@ npm run dev
 ```bash
 http://localhost:3000
 ```
-
-## Used packages
-1. "@distube/ytpl": "^1.2.1",
-2. "express": "^4.18.2",
-3. "ffmpeg-ffprobe-static": "^6.1.2-rc.1",
-4. "yt-dlp-exec": "^1.0.2"
