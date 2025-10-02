@@ -8,7 +8,7 @@ Dead simple YouTube playlist to MP3 converter that runs locally on your machine.
 - 📊 Real-time download progress
 - 🏷️ Optional metadata (title, description)
 - 💾 Runs completely locally on your machine
-- ❌ Age restricted or unavailable vidoes will be omitted
+- ❌ Age restricted or unavailable videos will be omitted and stored in output console
 
 ## Requirements
 1. Node.js 14+  [Official NodeJS webiste](https://nodejs.org/en/download)
